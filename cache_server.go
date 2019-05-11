@@ -52,7 +52,7 @@ func handleClient(conn *net.UDPConn, iplist []ipport) {
 		// fmt.Println([]byte("\x20\x00\x00\x00\x00\x00\xff\xff\xff\xffreq2"))
 	}
 
-	if string(request[6:]) == "\xff\xff\xff\xffreq2" {
+	if len(request) > 6 && string(request[6:]) == "\xff\xff\xff\xffreq2" {
 		fmt.Println("return response:")
 		response := parseIPListToBytes(iplist, addr.IP)
 		fmt.Println(response)
