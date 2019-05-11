@@ -75,7 +75,7 @@ func main() {
 	iplist := loadIPFromJSON()
 	addr := net.UDPAddr{
 		Port: 8300,
-		IP:   net.ParseIP("127.0.0.1"),
+		IP:   net.ParseIP("0.0.0.0"),
 	}
 	conn, err := net.ListenUDP("udp", &addr)
 	checkError(err)
