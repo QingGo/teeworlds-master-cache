@@ -1,2 +1,4 @@
 tmphost.txt
 *.exe
+
+haproxy.cfg
