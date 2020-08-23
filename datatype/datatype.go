@@ -43,3 +43,30 @@ type DeleteAddrRequest struct {
 	Token string
 	Data  ServerAddr
 }
+
+// ServerInfoRestAPIResponse 从status.tw获取的服务器列表响应
+type ServerInfoRestAPIResponse struct {
+	Servers []struct {
+		ServerIP         string        `json:"server_ip"`
+		ServerPort       string        `json:"server_port"`
+		FirstSeen        string        `json:"first_seen"`
+		LastSeen         string        `json:"last_seen"`
+		Version          string        `json:"version"`
+		Name             string        `json:"name"`
+		Password         bool          `json:"password"`
+		Ping             int           `json:"ping"`
+		ServerLevel      int           `json:"server_level"`
+		NumClients       int           `json:"num_clients"`
+		MaxClients       int           `json:"max_clients"`
+		NumPlayers       int           `json:"num_players"`
+		MaxPlayers       int           `json:"max_players"`
+		NumBotPlayers    int           `json:"num_bot_players"`
+		NumBotSpectators int           `json:"num_bot_spectators"`
+		Gamemode         string        `json:"gamemode"`
+		Map              string        `json:"map"`
+		Master           string        `json:"master"`
+		Country          string        `json:"country"`
+		IsVerified       bool          `json:"is_verified"`
+		Players          []interface{} `json:"players"`
+	} `json:"servers"`
+}

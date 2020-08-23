@@ -26,4 +26,7 @@ const (
 )
 
 // PostToken 用于验证POST请求
-var PostToken = flag.String("-PostToken", "66666", "-PostToken <your token>")
+var PostToken = flag.String("PostToken", "66666", "-PostToken <your token>")
+
+// ListenURL 用于rest的监听端口
+var ListenURL = flag.String("ListenURL", "0.0.0.0:18080", "-ListenURL <your url>")

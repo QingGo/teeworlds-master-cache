@@ -8,6 +8,7 @@ import (
 
 	"github.com/QingGo/teeworlds-master-cache/cache"
 	"github.com/QingGo/teeworlds-master-cache/handler"
+	"github.com/QingGo/teeworlds-master-cache/myconst"
 	"github.com/QingGo/teeworlds-master-cache/udpserver"
 )
 
@@ -32,5 +33,10 @@ func main() {
 	group.POST("server_list", handler.PostAddrList)
 	group.PUT("server_list", handler.PutAddr)
 	group.DELETE("server_list", handler.DeleteAddr)
-	r.Run("0.0.0.0:8080")
+
+	log.Infof("启动http服务器：%s", *myconst.ListenURL)
+	err = r.Run(*myconst.ListenURL)
+	if err != nil {
+		log.Fatalf("启动服务器失败：%s", err)
+	}
 }

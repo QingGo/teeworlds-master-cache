@@ -1,11 +1,11 @@
 ### Make your own Teeworlds master cache server
 ```
 # DEBUG
-go run .\cmd\teeworlds-master-cache.go
-# Production Env
-go build .\cmd\teeworlds-master-cache.go
-# linux
-GIN_MODE=release ./teeworlds-master-cache
+go run ./cmd/teeworlds-master-cache.go
+# Build
+go build ./cmd/teeworlds-master-cache.go
+# run
+nohup ./teeworlds-master-cache -PostToken <yourtoken> >> teeworlds-master-cache.log 2>&1 &
 ```
 ### How to Use Your Teeworlds master cache server
 * replace '127.0.0.1' in file 'add_to_host.bat' to your own cache server ip

@@ -1,7 +1,12 @@
 package cache
 
 import (
+	"encoding/json"
+	"fmt"
 	"net"
+	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,6 +42,71 @@ func Init() {
 	UDPResponseList = parser.ParseIPListToBytes(ServerAddrList)
 	log.Debugf("初始化的ip列表为：%+v", ServerAddrList)
 	log.Debugf("初始化的udp响应为：%+v", UDPResponseList)
+	RWLock.Unlock()
+
+	// 每隔一段时间拉取一次服务器列表
+	go func() {
+		t := time.NewTicker(10 * time.Minute)
+		defer t.Stop()
+		for {
+			// 首次运行先拉取一次
+			go getServerInfoFromRestAPI()
+			<-t.C
+		}
+	}()
+}
+
+var serverInfoRestAPI = "https://api.status.tw/2.0/server/list"
+var myClient = &http.Client{Timeout: 30 * time.Second}
+
+func getServerInfoFromRestAPI() {
+	// 防止程序挂掉
+	defer func() {
+		if r := recover(); r != nil {
+			log.Warnf("未知的panic：%s", r)
+		}
+	}()
+
+	r, err := myClient.Get(serverInfoRestAPI)
+	if err != nil {
+		log.Warnf("从status.tw获取服务器信息失败：%s", err)
+		return
+	}
+	defer r.Body.Close()
+
+	var rspStruct datatype.ServerInfoRestAPIResponse
+	err = json.NewDecoder(r.Body).Decode(&rspStruct)
+	if err != nil {
+		log.Warnf("解析json响应失败：%s", err)
+		return
+	}
+	// 合并新获取的结果和原来的结果，而不是覆盖
+	RWLock.Lock()
+	recordMap := make(map[string]bool)
+	for _, serverAddr := range ServerAddrList {
+		recordMap[fmt.Sprintf("%s:%d", serverAddr.IP, serverAddr.Port)] = true
+	}
+	for _, newServerAddr := range rspStruct.Servers {
+		recordMap[fmt.Sprintf("%s:%s", newServerAddr.ServerIP, newServerAddr.ServerPort)] = true
+	}
+	newServerAddrList := make([]datatype.ServerAddr, 0)
+	for key := range recordMap {
+		addrSlice := strings.Split(key, ":")
+		if len(addrSlice) == 2 {
+			port, err := strconv.ParseInt(addrSlice[1], 10, 32)
+			if err != nil {
+				log.Warnf("解析ip端口失败：%s", key)
+				continue
+			}
+			serverAddr := datatype.ServerAddr{
+				IP:   addrSlice[0],
+				Port: int(port),
+			}
+			newServerAddrList = append(newServerAddrList, serverAddr)
+		}
+	}
+	ServerAddrList = newServerAddrList
+	UDPResponseList = parser.ParseIPListToBytes(ServerAddrList)
 	RWLock.Unlock()
 }
 

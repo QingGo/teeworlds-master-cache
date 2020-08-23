@@ -1,4 +1,4 @@
-echo 127.0.0.1 master1.teeworlds.com >>C:\Windows\System32\drivers\etc\hosts
-echo   hostsÎÄ¼þÐÞ¸ÄÍê³É
+echo 49.232.3.102 master1.teeworlds.com >>C:\Windows\System32\drivers\etc\hosts
+echo   hostsï¿½Ä¼ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½
 ipconfig /flushdns
 pause
