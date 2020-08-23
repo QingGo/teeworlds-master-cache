@@ -6,6 +6,7 @@ import (
 	"github.com/QingGo/teeworlds-master-cache/cache"
 	"github.com/QingGo/teeworlds-master-cache/datatype"
 	"github.com/QingGo/teeworlds-master-cache/myconst"
+	"github.com/QingGo/teeworlds-master-cache/parser"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,12 +23,19 @@ func Ping(c *gin.Context) {
 
 // GetAddrList 获取服务器列表
 func GetAddrList(c *gin.Context) {
+	// 因为发送估计耗时较长，因此先加锁把数据取出，再发送
+	cache.RWLock.RLock()
+	serverAddrList := make([]datatype.ServerAddr, len(cache.ServerAddrList))
+	copy(serverAddrList, cache.ServerAddrList)
+	cache.RWLock.RUnlock()
+
 	response := datatype.GetAddrListRespone{
 		Code:    success,
 		Message: codeMessageMap[success],
-		Data:    cache.ServerAddrList,
+		Data:    serverAddrList,
 	}
 	c.JSON(200, response)
+
 }
 
 // PostAddrList 全量更新服务器列表
@@ -41,7 +49,10 @@ func PostAddrList(c *gin.Context) {
 		MessageResponse(c, http.StatusUnauthorized, tokenError)
 		return
 	}
+	cache.RWLock.Lock()
 	cache.ServerAddrList = json.Data
+	cache.UDPResponseList = parser.ParseIPListToBytes(cache.ServerAddrList)
+	cache.RWLock.Unlock()
 	MessageResponse(c, http.StatusOK, success)
 }
 
@@ -64,7 +75,10 @@ func PutAddr(c *gin.Context) {
 		}
 	}
 	if isAppend {
+		cache.RWLock.Lock()
 		cache.ServerAddrList = append(cache.ServerAddrList, json.Data)
+		cache.UDPResponseList = parser.ParseIPListToBytes(cache.ServerAddrList)
+		cache.RWLock.Unlock()
 	}
 
 	MessageResponse(c, http.StatusOK, success)
@@ -90,8 +104,11 @@ func DeleteAddr(c *gin.Context) {
 		}
 	}
 	if deleteIndex != -1 {
+		cache.RWLock.Lock()
 		cache.ServerAddrList[deleteIndex] = cache.ServerAddrList[len(cache.ServerAddrList)-1]
 		cache.ServerAddrList = cache.ServerAddrList[:len(cache.ServerAddrList)-1]
+		cache.UDPResponseList = parser.ParseIPListToBytes(cache.ServerAddrList)
+		cache.RWLock.Unlock()
 	}
 
 	MessageResponse(c, http.StatusOK, success)

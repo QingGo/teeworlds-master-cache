@@ -3,10 +3,19 @@ package myconst
 import "flag"
 
 // ServerBrowseGetList token
-var ServerBrowseGetList = string([]uint8{255, 255, 255, 255, 'r', 'e', 'q', '2'})
+var ServerBrowseGetList = []uint8{255, 255, 255, 255, 'r', 'e', 'q', '2'}
 
 // ServerBrowseList token
-var ServerBrowseList = string([]uint8{255, 255, 255, 255, 'l', 'i', 's', '2'})
+var ServerBrowseList = []uint8{255, 255, 255, 255, 'l', 'i', 's', '2'}
+
+// MaxServersPerPacket 一个包最多能带有多少个服务器地址
+const MaxServersPerPacket = 75
+
+// DataOffset 在数据包不是Extended类型时，数据包前面0xff的个数，这里用的不是Extended类型
+const DataOffset = 6
+
+// MaxPackets 最多发送多少个响应包，也许忽略这个限制也没关系？
+const MaxPackets = 16
 
 // 传输给teeworlds master server的字节报文，用来获取服务器列表信息
 const (

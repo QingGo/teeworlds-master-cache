@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"net"
 	"reflect"
 	"testing"
 
@@ -10,7 +9,7 @@ import (
 
 func TestParseServerInfo(t *testing.T) {
 	var parseTests = []struct {
-		in       []byte            // input
+		in       []byte                // input
 		expected []datatype.ServerAddr // expected result
 	}{
 		{in: []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 108, 105, 115, 50, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 164, 132, 46, 180, 32, 112, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 164, 132, 46, 180, 32, 111},
@@ -35,10 +34,9 @@ func TestParseServerInfo(t *testing.T) {
 }
 
 func TestParseIPListToBytes(t *testing.T) {
-	clientIP := net.IP{108, 105, 115, 50}
 	var parseTests = []struct {
 		in       []datatype.ServerAddr // input
-		expected []byte            // expected result
+		expected [][]byte              // expected result
 	}{
 		{
 			in: []datatype.ServerAddr{
@@ -51,11 +49,11 @@ func TestParseIPListToBytes(t *testing.T) {
 					Port: 8303,
 				},
 			},
-			expected: []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 108, 105, 115, 50, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 164, 132, 46, 180, 32, 112, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 164, 132, 46, 180, 32, 111},
+			expected: [][]byte{{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 108, 105, 115, 50, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 164, 132, 46, 180, 32, 112, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 164, 132, 46, 180, 32, 111}},
 		},
 	}
 	for _, tt := range parseTests {
-		actual := ParseIPListToBytes(tt.in, clientIP)
+		actual := ParseIPListToBytes(tt.in)
 		if !reflect.DeepEqual(actual, tt.expected) {
 			t.Errorf("parseServerInfo(%+v) = %+v; expected %+v", tt.in, actual, tt.expected)
 		}

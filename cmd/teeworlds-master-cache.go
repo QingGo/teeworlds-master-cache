@@ -23,7 +23,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("初始化udp服务端失败：%s", err)
 	}
-	udpServer.Run()
+	go udpServer.Run()
 
 	r := gin.Default()
 	r.GET("/ping", handler.Ping)
@@ -32,5 +32,5 @@ func main() {
 	group.POST("server_list", handler.PostAddrList)
 	group.PUT("server_list", handler.PutAddr)
 	group.DELETE("server_list", handler.DeleteAddr)
-	r.Run()
+	r.Run("0.0.0.0:8080")
 }

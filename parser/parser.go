@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/QingGo/teeworlds-master-cache/datatype"
+	"github.com/QingGo/teeworlds-master-cache/myconst"
 )
 
 // ParseServerInfo 把服务器返回的信息解析成ip端口列表
@@ -35,24 +36,39 @@ func ParseServerInfo(inforaw []byte) []datatype.ServerAddr {
 }
 
 // ParseIPListToBytes 把ip端口列表解析成此cache服务器返回的信息
-func ParseIPListToBytes(iplist []datatype.ServerAddr, clientIP net.IP) []byte {
-	responseBytes := []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255}
-	responseBytes = append(responseBytes, net.IP{108, 105, 115, 50}...)
+func ParseIPListToBytes(iplist []datatype.ServerAddr) (responseList [][]byte) {
+	responseBytesHeader := make([]byte, myconst.DataOffset+len(myconst.ServerBrowseList))
+	for i := 0; i < myconst.DataOffset; i++ {
+		responseBytesHeader[i] = 0XFF
+	}
+	for i, singleByte := range myconst.ServerBrowseList {
+		responseBytesHeader[i+myconst.DataOffset] = singleByte
+	}
+
+	responseList = make([][]byte, 0)
+	ipCounter := 0
 	for _, ipport := range iplist {
-		ipString := ipport.IP
-		responseBytes = append(responseBytes, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255}...)
-		for _, ipNumString := range strings.Split(ipString, ".") {
+		if ipCounter%myconst.MaxServersPerPacket == 0 {
+			// 更新引用
+			responseBytes := make([]byte, len(responseBytesHeader))
+			copy(responseBytes, responseBytesHeader)
+			// 提前放进去，存的只是slice的长度和背后的数组，后面直接append responseBytes不会影响这里
+			responseList = append(responseList, responseBytes)
+		}
+		ipCounter++
+		// 这里只考虑ipv4
+		responseList[len(responseList)-1] = append(responseList[len(responseList)-1], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255)
+		for _, ipNumString := range strings.Split(ipport.IP, ".") {
 			ipNumInt, err := strconv.Atoi(ipNumString)
 			if err != nil {
 				log.Debugf("ip解析错误：%s", err)
 			}
-			responseBytes = append(responseBytes, byte(ipNumInt))
+			responseList[len(responseList)-1] = append(responseList[len(responseList)-1], byte(ipNumInt))
 		}
-		portInt := ipport.Port
 		portBytes := make([]byte, 2)
-		portuInt16 := uint16(portInt)
+		portuInt16 := uint16(ipport.Port)
 		binary.BigEndian.PutUint16(portBytes, portuInt16)
-		responseBytes = append(responseBytes, portBytes...)
+		responseList[len(responseList)-1] = append(responseList[len(responseList)-1], portBytes...)
 	}
-	return responseBytes
+	return responseList
 }
