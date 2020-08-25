@@ -2,11 +2,10 @@ package cache
 
 import (
 	"encoding/json"
-	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -50,7 +49,8 @@ func Init() {
 		defer t.Stop()
 		for {
 			// 首次运行先拉取一次
-			go getServerInfoFromRestAPI()
+			// go getServerInfoFromRestAPI()
+			go getServerInfoFromMasterList()
 			<-t.C
 		}
 	}()
@@ -81,52 +81,139 @@ func getServerInfoFromRestAPI() {
 		return
 	}
 	// 合并新获取的结果和原来的结果，而不是覆盖
-	RWLock.Lock()
-	recordMap := make(map[string]bool)
+
+	recordMap := make(map[datatype.ServerAddr]bool)
+
+	RWLock.RLock()
 	for _, serverAddr := range ServerAddrList {
-		recordMap[fmt.Sprintf("%s:%d", serverAddr.IP, serverAddr.Port)] = true
+		recordMap[serverAddr] = true
 	}
+	RWLock.RUnlock()
+
 	for _, newServerAddr := range rspStruct.Servers {
-		recordMap[fmt.Sprintf("%s:%s", newServerAddr.ServerIP, newServerAddr.ServerPort)] = true
+		port, err := strconv.ParseInt(newServerAddr.ServerPort, 10, 32)
+		if err != nil {
+			log.Warnf("解析ip端口失败：%s", newServerAddr.ServerPort)
+			continue
+		}
+		newServerAddr2 := datatype.ServerAddr{
+			IP:   newServerAddr.ServerIP,
+			Port: int(port),
+		}
+		recordMap[newServerAddr2] = true
 	}
 	newServerAddrList := make([]datatype.ServerAddr, 0)
 	for key := range recordMap {
-		addrSlice := strings.Split(key, ":")
-		if len(addrSlice) == 2 {
-			port, err := strconv.ParseInt(addrSlice[1], 10, 32)
-			if err != nil {
-				log.Warnf("解析ip端口失败：%s", key)
-				continue
-			}
-			serverAddr := datatype.ServerAddr{
-				IP:   addrSlice[0],
-				Port: int(port),
-			}
-			newServerAddrList = append(newServerAddrList, serverAddr)
-		}
+		newServerAddrList = append(newServerAddrList, key)
 	}
+
+	RWLock.Lock()
 	ServerAddrList = newServerAddrList
 	UDPResponseList = parser.ParseIPListToBytes(ServerAddrList)
 	RWLock.Unlock()
 }
 
-func getServerInfo(masterURL string) []byte {
-	conn, err := net.Dial("udp4", masterURL)
-	if err != nil {
-		log.Warnf("尝试从master获取信息失败：%s\n", err)
+var masterURLList = []string{
+	"master1.teeworlds.com:8300",
+	"master2.teeworlds.com:8300",
+	"master3.teeworlds.com:8300",
+	"master4.teeworlds.com:8300",
+}
+var packageChan = make(chan []byte, 1000)
+
+func getServerInfoFromMasterList() {
+	// 防止程序挂掉
+	defer func() {
+		if r := recover(); r != nil {
+			log.Warnf("未知的panic：%s", r)
+		}
+	}()
+
+	for _, masterURL := range masterURLList {
+		go getServerInfoFromMaster(masterURL)
 	}
-	defer conn.Close()
-	timeout, _ := time.ParseDuration("10s")
-	conn.SetReadDeadline(time.Now().Add(timeout))
-	_, err = conn.Write([]byte(myconst.PacketGetList2))
-	if err != nil {
-		log.Warnf("尝试从master获取信息失败：%s\n", err)
+
+	recordMap := make(map[datatype.ServerAddr]bool)
+
+	RWLock.RLock()
+	for _, serverAddr := range ServerAddrList {
+		recordMap[serverAddr] = true
 	}
-	var buf [20480]byte
-	n, err := conn.Read(buf[0:])
-	inforaw := buf[0:n]
-	if err != nil {
-		log.Warnf("尝试从master获取信息失败：%s\n", err)
+	RWLock.RUnlock()
+
+	// 处理packageChan接收到的数据包
+	for data := range packageChan {
+		serverAddrList := parser.ParseServerInfo(data)
+		for _, newServerAddr := range serverAddrList {
+			recordMap[newServerAddr] = true
+		}
 	}
-	return inforaw
+	newServerAddrList := make([]datatype.ServerAddr, 0)
+	for key := range recordMap {
+		newServerAddrList = append(newServerAddrList, key)
+	}
+
+	RWLock.Lock()
+	ServerAddrList = newServerAddrList
+	UDPResponseList = parser.ParseIPListToBytes(ServerAddrList)
+	RWLock.Unlock()
+
+}
+
+func getServerInfoFromMaster(masterURL string) {
+	// 防止程序挂掉
+	defer func() {
+		if r := recover(); r != nil {
+			log.Warnf("未知的panic：%s", r)
+		}
+	}()
+
+	tryCount := 0
+	var clientConn *net.UDPConn
+	var err error
+	for {
+		clientPort := rand.Intn(22801-22223) + 22223
+		clientAddr := net.UDPAddr{
+			Port: clientPort,
+			IP:   net.ParseIP("0.0.0.0"),
+		}
+		clientConn, err = net.ListenUDP("udp", &clientAddr)
+		if err == nil {
+			break
+		} else if tryCount >= 3 {
+			log.Warnf("尝试了%d次分配端口都失败，中断。", tryCount)
+			break
+		}
+		tryCount++
+	}
+	defer clientConn.Close()
+
+	serverAddr, _ := net.ResolveUDPAddr("udp", masterURL)
+	log.Debugf("%+v\n", serverAddr)
+	_, err = clientConn.WriteTo([]byte(myconst.PacketGetList2), serverAddr)
+
+	buf := make([]byte, 32768)
+	timeout := time.After(time.Second * 20)
+	clientConn.SetDeadline(time.Now().Add(time.Second * 20))
+	for {
+		select {
+		case <-timeout:
+			log.Debug("等待结束")
+			close(packageChan)
+			return
+		default:
+			log.Debug("尝试读取响应")
+			n, _, err := clientConn.ReadFromUDP(buf)
+			if err != nil {
+				log.Warnf("读取响应错误：%s", err.Error())
+				break
+			}
+			if n > 14 {
+				inforaw := buf[0:n]
+				packageChan <- inforaw
+			}
+		}
+
+	}
+
 }
