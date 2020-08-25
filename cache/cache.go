@@ -54,6 +54,17 @@ func Init() {
 			<-t.C
 		}
 	}()
+
+	go func() {
+		t := time.NewTicker(5 * time.Minute)
+		defer t.Stop()
+		for {
+			// 首次运行先拉取一次
+			// go getServerInfoFromRestAPI()
+			go getServerInfoFromRestAPI()
+			<-t.C
+		}
+	}()
 }
 
 var serverInfoRestAPI = "https://api.status.tw/2.0/server/list"
@@ -84,12 +95,6 @@ func getServerInfoFromRestAPI() {
 
 	recordMap := make(map[datatype.ServerAddr]bool)
 
-	RWLock.RLock()
-	for _, serverAddr := range ServerAddrList {
-		recordMap[serverAddr] = true
-	}
-	RWLock.RUnlock()
-
 	for _, newServerAddr := range rspStruct.Servers {
 		port, err := strconv.ParseInt(newServerAddr.ServerPort, 10, 32)
 		if err != nil {
@@ -108,6 +113,10 @@ func getServerInfoFromRestAPI() {
 	}
 
 	RWLock.Lock()
+	for _, serverAddr := range ServerAddrList {
+		recordMap[serverAddr] = true
+	}
+
 	ServerAddrList = newServerAddrList
 	UDPResponseList = parser.ParseIPListToBytes(ServerAddrList)
 	RWLock.Unlock()
@@ -135,12 +144,6 @@ func getServerInfoFromMasterList() {
 
 	recordMap := make(map[datatype.ServerAddr]bool)
 
-	RWLock.RLock()
-	for _, serverAddr := range ServerAddrList {
-		recordMap[serverAddr] = true
-	}
-	RWLock.RUnlock()
-
 	// 处理packageChan接收到的数据包
 	for data := range packageChan {
 		serverAddrList := parser.ParseServerInfo(data)
@@ -154,6 +157,9 @@ func getServerInfoFromMasterList() {
 	}
 
 	RWLock.Lock()
+	for _, serverAddr := range ServerAddrList {
+		recordMap[serverAddr] = true
+	}
 	ServerAddrList = newServerAddrList
 	UDPResponseList = parser.ParseIPListToBytes(ServerAddrList)
 	RWLock.Unlock()
@@ -193,8 +199,8 @@ func getServerInfoFromMaster(masterURL string) {
 	_, err = clientConn.WriteTo([]byte(myconst.PacketGetList2), serverAddr)
 
 	buf := make([]byte, 32768)
-	timeout := time.After(time.Second * 20)
-	clientConn.SetDeadline(time.Now().Add(time.Second * 20))
+	timeout := time.After(time.Second * 30)
+	clientConn.SetDeadline(time.Now().Add(time.Second * 30))
 	for {
 		select {
 		case <-timeout:
@@ -209,7 +215,9 @@ func getServerInfoFromMaster(masterURL string) {
 				break
 			}
 			if n > 14 {
-				inforaw := buf[0:n]
+				// 先复制再传入channel
+				inforaw := make([]byte, n)
+				copy(inforaw, buf[0:n])
 				packageChan <- inforaw
 			}
 		}

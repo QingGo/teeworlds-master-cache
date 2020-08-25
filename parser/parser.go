@@ -15,7 +15,6 @@ import (
 // ParseServerInfo 把服务器返回的信息解析成ip端口列表
 func ParseServerInfo(inforaw []byte) []datatype.ServerAddr {
 	inforaw = inforaw[14:]
-	// 暂时没考虑ipv6
 	numServers := len(inforaw) / 18
 	iplist := make([]datatype.ServerAddr, 0, 10)
 	for i := 0; i < numServers; i++ {
@@ -27,7 +26,7 @@ func ParseServerInfo(inforaw []byte) []datatype.ServerAddr {
 			ip = net.IP(inforaw[i*18 : i*18+16])
 		}
 		port := int(inforaw[i*18+16])*256 + int(inforaw[i*18+17])
-		log.Debug(ip.String(), port)
+		// log.Debugf("%s:%d", ip.String(), port)
 		iplist = append(iplist, datatype.ServerAddr{
 			IP:   ip.String(),
 			Port: port})

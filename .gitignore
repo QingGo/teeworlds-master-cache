@@ -2,3 +2,4 @@ tmphost.txt
 *.exe
 
 haproxy.cfg
+*.log

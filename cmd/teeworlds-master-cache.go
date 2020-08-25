@@ -31,7 +31,7 @@ func CORSMiddleware() gin.HandlerFunc {
 
 func main() {
 	log.SetReportCaller(true)
-	log.SetLevel(log.InfoLevel)
+	log.SetLevel(log.DebugLevel)
 	log.SetFormatter(&log.JSONFormatter{})
 	gin.SetMode(gin.ReleaseMode)
 	flag.Parse()
