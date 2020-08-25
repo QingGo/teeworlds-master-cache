@@ -108,15 +108,15 @@ func getServerInfoFromRestAPI() {
 		recordMap[newServerAddr2] = true
 	}
 	newServerAddrList := make([]datatype.ServerAddr, 0)
-	for key := range recordMap {
-		newServerAddrList = append(newServerAddrList, key)
-	}
 
 	RWLock.Lock()
+	// 读旧的ip
 	for _, serverAddr := range ServerAddrList {
 		recordMap[serverAddr] = true
 	}
-
+	for key := range recordMap {
+		newServerAddrList = append(newServerAddrList, key)
+	}
 	ServerAddrList = newServerAddrList
 	UDPResponseList = parser.ParseIPListToBytes(ServerAddrList)
 	RWLock.Unlock()
@@ -152,13 +152,14 @@ func getServerInfoFromMasterList() {
 		}
 	}
 	newServerAddrList := make([]datatype.ServerAddr, 0)
-	for key := range recordMap {
-		newServerAddrList = append(newServerAddrList, key)
-	}
 
 	RWLock.Lock()
+	// 读旧的ip
 	for _, serverAddr := range ServerAddrList {
 		recordMap[serverAddr] = true
+	}
+	for key := range recordMap {
+		newServerAddrList = append(newServerAddrList, key)
 	}
 	ServerAddrList = newServerAddrList
 	UDPResponseList = parser.ParseIPListToBytes(ServerAddrList)
