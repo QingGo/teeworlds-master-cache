@@ -2,13 +2,16 @@ package main
 
 import (
 	"flag"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/QingGo/teeworlds-master-cache/cache"
 	"github.com/QingGo/teeworlds-master-cache/handler"
+	"github.com/QingGo/teeworlds-master-cache/myconst"
 	"github.com/QingGo/teeworlds-master-cache/udpserver"
 )
 
@@ -29,12 +32,28 @@ func CORSMiddleware() gin.HandlerFunc {
 	}
 }
 
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
+
 func main() {
 	log.SetReportCaller(true)
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.JSONFormatter{})
 	gin.SetMode(gin.ReleaseMode)
 	flag.Parse()
+	if *myconst.PostToken == "" {
+		rand.Seed(time.Now().UnixNano())
+		_PostToken := randStringRunes(16)
+		myconst.PostToken = &_PostToken
+		log.Infof("没有指定token，自动生成：%s", _PostToken)
+	}
 	cache.Init()
 
 	port := os.Getenv("PORT")
