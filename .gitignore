@@ -3,3 +3,5 @@ tmphost.txt
 
 haproxy.cfg
 *.log
+
+bin/

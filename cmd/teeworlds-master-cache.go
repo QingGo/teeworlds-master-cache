@@ -2,13 +2,13 @@ package main
 
 import (
 	"flag"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/QingGo/teeworlds-master-cache/cache"
 	"github.com/QingGo/teeworlds-master-cache/handler"
-	"github.com/QingGo/teeworlds-master-cache/myconst"
 	"github.com/QingGo/teeworlds-master-cache/udpserver"
 )
 
@@ -37,6 +37,11 @@ func main() {
 	flag.Parse()
 	cache.Init()
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "18080"
+	}
+
 	udpServer, err := udpserver.NewUDPServer("0.0.0.0", 8300)
 	if err != nil {
 		log.Fatalf("初始化udp服务端失败：%s", err)
@@ -52,8 +57,8 @@ func main() {
 	group.PUT("server_list", handler.PutAddr)
 	group.DELETE("server_list", handler.DeleteAddr)
 
-	log.Infof("启动http服务器：%s", *myconst.ListenURL)
-	err = r.Run(*myconst.ListenURL)
+	log.Infof("启动http服务器：%s", ":"+port)
+	err = r.Run(":" + port)
 	if err != nil {
 		log.Fatalf("启动服务器失败：%s", err)
 	}
