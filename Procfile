@@ -1,1 +1,1 @@
-web: bin/cmd 
+web: bin/cmd -ProxyURL http://49.232.3.102:18080/

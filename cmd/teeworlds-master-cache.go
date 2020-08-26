@@ -6,6 +6,10 @@ import (
 	"os"
 	"time"
 
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 
@@ -42,43 +46,74 @@ func randStringRunes(n int) string {
 	return string(b)
 }
 
+func proxy(c *gin.Context) {
+	// https://49.232.3.102:10443/api/v1/server_list
+	remote, err := url.Parse(*myconst.ProxyURL)
+	if err != nil {
+		panic(err)
+	}
+
+	proxy := httputil.NewSingleHostReverseProxy(remote)
+	//Define the director func
+	//This is a good place to log, for example
+	proxy.Director = func(req *http.Request) {
+		req.Header = c.Request.Header
+		req.Host = remote.Host
+		req.URL.Scheme = remote.Scheme
+		req.URL.Host = remote.Host
+		req.URL.Path = c.Param("proxyPath")
+	}
+
+	proxy.ServeHTTP(c.Writer, c.Request)
+}
+
 func main() {
 	log.SetReportCaller(true)
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.JSONFormatter{})
 	gin.SetMode(gin.ReleaseMode)
 	flag.Parse()
-	if *myconst.PostToken == "" {
-		rand.Seed(time.Now().UnixNano())
-		_PostToken := randStringRunes(16)
-		myconst.PostToken = &_PostToken
-		log.Infof("没有指定token，自动生成：%s", _PostToken)
-	}
-	cache.Init()
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "18080"
 	}
 
-	udpServer, err := udpserver.NewUDPServer("0.0.0.0", 8300)
-	if err != nil {
-		log.Fatalf("初始化udp服务端失败：%s", err)
-	}
-	go udpServer.Run()
-
 	r := gin.Default()
-	r.Use(CORSMiddleware())
-	r.GET("/ping", handler.Ping)
-	group := r.Group("/api/v1")
-	group.GET("server_list", handler.GetAddrList)
-	group.POST("server_list", handler.PostAddrList)
-	group.PUT("server_list", handler.PutAddr)
-	group.DELETE("server_list", handler.DeleteAddr)
 
-	log.Infof("启动http服务器：%s", ":"+port)
-	err = r.Run(":" + port)
-	if err != nil {
-		log.Fatalf("启动服务器失败：%s", err)
+	if *myconst.ProxyURL == "" {
+		r.Use(CORSMiddleware())
+		if *myconst.PostToken == "" {
+			rand.Seed(time.Now().UnixNano())
+			_PostToken := randStringRunes(16)
+			myconst.PostToken = &_PostToken
+			log.Infof("没有指定token，自动生成：%s", _PostToken)
+		}
+		cache.Init()
+
+		udpServer, err := udpserver.NewUDPServer("0.0.0.0", 8300)
+		if err != nil {
+			log.Fatalf("初始化udp服务端失败：%s", err)
+		}
+		go udpServer.Run()
+
+		r.GET("/ping", handler.Ping)
+		group := r.Group("/api/v1")
+		group.GET("server_list", handler.GetAddrList)
+		group.POST("server_list", handler.PostAddrList)
+		group.PUT("server_list", handler.PutAddr)
+		group.DELETE("server_list", handler.DeleteAddr)
+
+		log.Infof("启动http服务器：%s", ":"+port)
+		err = r.Run(":" + port)
+		if err != nil {
+			log.Fatalf("启动服务器失败：%s", err)
+		}
+	} else {
+		// 反向代理模式
+		//Create a catchall route
+		log.Info("使用反向代理模式")
+		r.Any("/*proxyPath", proxy)
+		r.Run(":" + port)
 	}
 }

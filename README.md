@@ -40,3 +40,18 @@ sudo haproxy -f /etc/haproxy/haproxy.cfg -sf
 sudo haproxy -f /etc/haproxy/haproxy.cfg -p /var/run/haproxy.pid -sf $(cat /var/run/haproxy.pid)
 
 ```
+但是自己生成的https证书还是会有警告，ip又无法申请https证书，最后决定把api应用部署到heroku。主要是需要把端口配置从环境变量获取，新增Procfile配置文件，以及修改一下生成token的逻辑保障安全。在网页端可以关联github库，每次推master分支时自动部署。
+heroku cli是通过git分支heroku的信息和项目关联在一起的
+``` bash
+# 登录前先设置代理，和网页用的要一致
+heroku login
+git remote get-url heroku
+git remote set-url heroku https://git.heroku.com/teeworld-master-cache.git
+heroku ps
+heroku logs --tail
+heroku open
+```
+
+在heroku上部署有两个问题。一是免费账号30分钟无人访问会自动睡眠，内存里存的服务器列表数据丢失。二是没找到提供udp端口给客户端访问的方式，这是致命的一点。
+
+因此打算把heroku上的应用作为反向代理，只利用其提供https的功能。但是heroku访问到国内的服务器会慢，服务器部署在海外的话，游戏客户端获取列表会和其它请求都会变慢。下一步考虑找找国内有没有类似的PaaS免费提供商。或者有没有别的给ip地址加一层https的方案。

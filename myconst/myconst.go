@@ -30,3 +30,6 @@ var PostToken = flag.String("PostToken", "", "-PostToken <your token>")
 
 // ListenURL 用于rest的监听端口
 var ListenURL = flag.String("ListenURL", "0.0.0.0:18080", "-ListenURL <your url>")
+
+// ProxyURL 把在heroku上部署的应用作为反向代理，转发请求到实际服务器。
+var ProxyURL = flag.String("ProxyURL", "", "-ProxyURL <your url>")
