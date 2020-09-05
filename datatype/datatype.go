@@ -70,3 +70,51 @@ type ServerInfoRestAPIResponse struct {
 		Players          []interface{} `json:"players"`
 	} `json:"servers"`
 }
+
+// {
+// 	"address": "49.232.3.102:8303",
+// 	"version": "12.6.1",
+// 	"servername": "Eki's DDNet Test Server",
+// 	"mapname": "Just2Easy",
+// 	"gametype": "ddnet",
+// 	"flags": 0,
+// 	"numplayers": 0,
+// 	"maxplayers": 64,
+// 	"numclients": 0,
+// 	"maxclients": 64,
+// 	"ping": 20,
+// 	"clients": [
+// 		{
+// 			"name": "Eki",
+// 			"clan": "",
+// 			"country": 0,
+// 			"score": 9999,
+// 			"player": true
+// 		}
+// 	]
+// }
+
+// ServerInfoForWeb 给web客户端提供数据返回
+type ServerInfoForWeb struct {
+	Address    string             `json:"address"`
+	Version    string             `json:"version"`
+	Servername string             `json:"servername"`
+	Mapname    string             `json:"mapname"`
+	Gametype   string             `json:"gametype"`
+	Flags      int                `json:"flags"`
+	Numplayers int                `json:"numplayers"`
+	Maxplayers int                `json:"maxplayers"`
+	Numclients int                `json:"numclients"`
+	Maxclients int                `json:"maxclients"`
+	Ping       int                `json:"ping"`
+	Clients    []ClientInfoForWeb `json:"clients"`
+}
+
+// ClientInfoForWeb 给web客户端提供数据返回
+type ClientInfoForWeb struct {
+	Name    string `json:"name"`
+	Clan    string `json:"clan"`
+	Country int    `json:"country"`
+	Score   int    `json:"score"`
+	Player  bool   `json:"player"`
+}

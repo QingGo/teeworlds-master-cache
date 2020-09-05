@@ -1,0 +1,24 @@
+[
+    {
+        "address": "49.232.3.102:8303",
+        "version": "12.6.1",
+        "servername": "Eki's DDNet Test Server",
+        "mapname": "Just2Easy",
+        "gametype": "ddnet",
+        "flags": 0,
+        "numplayers": 0,
+        "maxplayers": 64,
+        "numclients": 0,
+        "maxclients": 64,
+        "ping": 20,
+        "clients": [
+            {
+                "name": "Eki",
+                "clan": "",
+                "country": 0,
+                "score": 9999,
+                "player": true
+            }
+        ]
+    }
+]

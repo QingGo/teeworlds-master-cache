@@ -98,6 +98,7 @@ func main() {
 		go udpServer.Run()
 
 		r.GET("/ping", handler.Ping)
+		r.GET("/srvrlist.json", handler.Srvrlist)
 		group := r.Group("/api/v1")
 		group.GET("server_list", handler.GetAddrList)
 		group.POST("server_list", handler.PostAddrList)
